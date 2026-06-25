@@ -1,3 +1,3 @@
-# Карта текущего IT-ландшафта
+п»ї# РљР°СЂС‚Р° С‚РµРєСѓС‰РµРіРѕ IT-Р»Р°РЅРґС€Р°С„С‚Р°
 
 <img src="/Task1/IT-landscape.png" alt="IT landscape" width="100%"/>
