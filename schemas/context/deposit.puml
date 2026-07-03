@@ -1,0 +1,22 @@
+@startuml deposit
+
+!includeurl ../include/C4_Component.puml
+
+title Context Diagram - MVP Deposit Opening
+
+Person(customer, "Customer", "Bank client")
+Person(back_office, "Back Office Manager", "Manages rates and applications")
+Person(callcenter, "Call center operator", "Fills out applications with details provided by customers")
+
+System_Ext(sms_gateway, "SMS Gateway", "External SMS service")
+
+System_Boundary(bank, "Standart Bank") {
+    System(deposit_system, "Deposit System", "Online deposit opening MVP")
+}
+
+Rel(customer, deposit_system, "View rates, submit application", "HTTPS")
+Rel(back_office, deposit_system, "Upload rates, process applications", "Desktop")
+Rel(callcenter, deposit_system, "Fills out order", "HTTPS")
+Rel(deposit_system, sms_gateway, "Send SMS notifications", "REST")
+
+@enduml
