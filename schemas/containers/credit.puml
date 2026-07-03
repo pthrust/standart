@@ -1,0 +1,58 @@
+@startuml credit
+
+!includeurl ../include/C4_Component.puml
+
+title Container Diagram - Online Credit Application
+
+Person(customer, "Customer", "Bank client")
+Person(manager_office, "Office Manager", "Works with applications in ABS")
+Person(manager_credit, "Credit Department Manager", "Processes applications in Credit Conveyor")
+
+System_Ext(sms_gateway, "SMS Gateway", "External SMS service")
+System_Ext(bki, "Bureau of Credit Histories", "External REST API")
+
+System_Boundary(bank, "Standard Bank") {
+    Container(website, "Website", "PHP + React", "Provides credit offers and application form")
+    Container(internet_bank, "Internet Bank", "ASP.NET MVC", "Provides pre-approved offers and application")
+    Container(credit_front, "Credit Front Microservice", "Java Spring Boot", "Manages applications, pre-approvals, async integration")
+    Container(redis, "Redis", "In-memory cache", "Stores pre-approved offers and scoring results")
+    Container(kafka, "Kafka", "Message broker", "Async communication (deposit-requests, credit-events)")
+    Container(adapter_conveyor, "Conveyor Adapter", "Java", "Consumes Kafka, calls Credit Conveyor API")
+    Container(credit_conveyor, "Credit Conveyor", "Camunda, Oracle", "Processes credit applications (BPM)")
+    Container(scoring, "Scoring System", "Python/Flask, PostgreSQL", "Calculates credit rating")
+    Container(abs, "ABS", "Oracle, Delphi", "Core banking, creates/updates applications")
+    ContainerDb(credit_front_db, "Credit Front DB", "MS SQL", "Stores applications and pre-approval data")
+    ContainerDb(conveyor_db, "Conveyor DB", "Oracle", "Stores application data and process instances")
+    ContainerDb(scoring_db, "Scoring DB", "PostgreSQL", "Stores scoring models and results")
+    ContainerDb(abs_db, "ABS DB", "Oracle", "Stores client data, applications, accounts")
+}
+
+Rel(customer, website, "HTTPS", "View offers, apply")
+Rel(customer, internet_bank, "HTTPS", "View pre-approved, apply")
+
+Rel(website, credit_front, "REST API", "Submit application, get offers")
+Rel(internet_bank, credit_front, "REST API", "Get pre-approved, submit")
+
+Rel(credit_front, sms_gateway, "Send SMS", "REST")
+Rel(credit_front, bki, "Get credit history", "REST")
+Rel(credit_front, scoring, "Request scoring", "REST")
+Rel(credit_front, redis, "Read/write pre-approvals", "GET/SET")
+Rel(credit_front, credit_front_db, "Reads/writes", "JDBC")
+
+Rel(credit_front, kafka, "Publish application", "producer")
+
+Rel(kafka, adapter_conveyor, "Consume", "consumer")
+Rel(adapter_conveyor, credit_conveyor, "Create/update application", "REST/SOAP")
+
+Rel(credit_conveyor, scoring, "Request scoring (during processing)", "REST")
+Rel(credit_conveyor, conveyor_db, "Reads/writes", "SQL")
+
+Rel(abs, kafka, "Publish application events (CDC)", "via Debezium")
+
+Rel(manager_office, abs, "Create/find applications", "Desktop")
+Rel(manager_credit, credit_conveyor, "Process applications", "Web UI")
+
+Rel(abs, abs_db, "Reads/writes", "SQL")
+Rel(scoring, scoring_db, "Reads/writes", "SQL")
+
+@enduml
