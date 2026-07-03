@@ -1,0 +1,29 @@
+@startuml callcenter
+!includeurl ../include/C4_Component.puml
+
+title Context Diagram - Deposit Rates Distribution to Call Centers
+
+Person(operator, "Call Center Operator", "Bank employee")
+Person(partner_operator, "Partner Call Center Operator", "External employee")
+Person(back_office, "Back Office Manager", "Uploads rates to ABS")
+
+System_Ext(partner_sftp, "Partner SFTP Server", "External file storage")
+System_Ext(sms_gateway, "SMS Gateway", "External SMS service")
+
+System_Boundary(bank, "Standard Bank") {
+    System(abs, "ABS", "Core banking system, rates management")
+    System(deposit_system, "Deposit System", "Online deposit opening MVP")
+    System(crm, "Call Center CRM", "Java Spring Boot, PostgreSQL")
+    System(export_service, "Rates Export Service", "Generates and distributes rate files")
+}
+
+Rel(back_office, abs, "Upload rates from XLS", "Desktop")
+Rel(abs, deposit_system, "Publish rate changes", "Kafka")
+Rel(deposit_system, crm, "Provide rates via REST API", "HTTPS")
+Rel(operator, crm, "View rates", "HTTPS")
+Rel(deposit_system, export_service, "Publish rate changes", "Kafka")
+Rel(export_service, partner_sftp, "Upload rates file", "SFTP")
+Rel(partner_operator, partner_sftp, "Download rates file", "SFTP")
+Rel(deposit_system, sms_gateway, "Send SMS", "REST")
+
+@enduml

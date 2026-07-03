@@ -1,0 +1,37 @@
+@startuml callcenter
+!includeurl ../include/C4_Component.puml
+
+title Container Diagram - Deposit Rates Distribution
+
+Person(operator, "Call Center Operator", "Bank employee")
+Person(partner_operator, "Partner Call Center Operator", "External employee")
+Person(back_office, "Back Office Manager", "Uploads rates to ABS")
+
+System_Ext(partner_sftp, "Partner SFTP Server", "External file storage")
+
+System_Boundary(bank, "Standard Bank") {
+    Container(abs, "ABS", "Oracle, Delphi", "Manages deposit rates (single source of truth)")
+    Container(deposit_ms, "Deposit Microservice", "Java Spring Boot", "Handles applications, caches rates")
+    Container(redis, "Redis", "In-memory store", "Caches current rates for fast access")
+    Container(kafka, "Kafka", "Message broker", "Asynchronous communication (deposit-rates topic)")
+    Container(crm, "Call Center CRM", "Java Spring Boot, PostgreSQL", "Provides rate information to operators")
+    Container(export_service, "Rates Export Service", "Java Spring Boot", "Generates and uploads rate files to partner SFTP")
+    ContainerDb(abs_db, "ABS Database", "Oracle", "Stores rates, applications, deposits")
+    ContainerDb(crm_db, "CRM Database", "PostgreSQL", "Stores call records, client data")
+}
+
+Rel(back_office, abs, "Upload rates from XLS", "Desktop")
+Rel(abs, abs_db, "Reads/writes", "SQL")
+Rel(abs_db, kafka, "Publish rate change (trigger)", "CDC / UTL_HTTP")
+Rel(kafka, deposit_ms, "Consume rate event", "consumer")
+Rel(deposit_ms, redis, "Update cache", "SET")
+Rel(deposit_ms, crm, "Provide current rates", "REST API")
+Rel(operator, crm, "View rates", "HTTPS")
+Rel(crm, crm_db, "Reads/writes", "SQL")
+
+Rel(kafka, export_service, "Consume rate event", "consumer")
+Rel(export_service, partner_sftp, "Upload file", "SFTP")
+Rel(partner_operator, partner_sftp, "Download file", "SFTP")
+
+
+@enduml
