@@ -1,0 +1,60 @@
+@startuml deposit
+!includeurl ../include/C4_Component.puml
+
+title Container Diagram - MVP Deposit Opening
+
+' Actors
+Person(customer, "Customer", "Bank client")
+Person(back_office, "Back Office Manager", "Manages rates and applications")
+Person(callcenter, "Call Center Operator", "Fills out applications with details provided by customers")
+
+' External systems
+System_Ext(sms_gateway, "SMS Gateway", "External SMS service")
+
+' Bank systems boundary
+System_Boundary(bank, "Standard Bank") {
+    Container(website, "Website", "PHP + React", "Provides deposit product info and application form")
+    Container(internet_bank, "Internet Bank", "ASP.NET MVC", "Provides personalised rates and application")
+    Container(deposit_ms, "Deposit Microservice", "Java Spring Boot", "Handles applications, rates cache, SMS, Kafka")
+    Container(redis, "Redis", "In-memory store", "Caches current deposit rates")
+    Container(kafka, "Kafka", "Message broker", "Asynchronous communication between services")
+    Container(adapter, "ABS Adapter", "Java", "Consumes Kafka, calls ABS API")
+    Container(abs, "ABS", "Oracle, Delphi, PL-SQL", "Core banking system, manages rates and deposits")
+    ContainerDb(ms_sql, "Microservice DB", "MS SQL", "Stores applications and rate cache")
+    ContainerDb(abs_db, "ABS Database", "Oracle", "Stores rates, applications, deposits")
+}
+
+' Customer interactions
+Rel(customer, website, "HTTPS", "View rates, apply")
+Rel(customer, internet_bank, "HTTPS", "View rates, apply")
+
+' Call center operator interaction
+Rel(callcenter, deposit_ms, "HTTPS (REST)", "Fills out application")
+
+' Frontend to microservice
+Rel(website, deposit_ms, "REST API", "Get rates, submit")
+Rel(internet_bank, deposit_ms, "REST API", "Get rates, submit")
+
+' Microservice internal connections
+Rel(deposit_ms, redis, "Read", "getRate()")
+Rel(deposit_ms, kafka, "Publish", "deposit-requests")
+Rel(deposit_ms, sms_gateway, "Send SMS", "REST")
+Rel(deposit_ms, ms_sql, "Reads/writes", "JDBC")
+
+' Kafka to Adapter
+Rel(kafka, adapter, "Consume", "deposit-requests")
+Rel(adapter, abs, "Create application", "REST (ORDS)")
+
+' Back office works with ABS
+Rel(back_office, abs, "Upload rates, process", "Desktop client")
+
+' Rate change propagation
+Rel(abs, kafka, "Publish rate changes", "Trigger/CDC")
+Rel(abs, deposit_ms, "Notify rate change", "HTTP")
+Rel(abs, abs_db, "Reads/writes", "SQL")
+
+' Optional: show that call center uses the same deposit microservice for application
+' The call center operator can fill out applications via a dedicated interface
+' which is not shown here, but we can mention it.
+
+@enduml

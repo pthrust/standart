@@ -1,0 +1,33 @@
+@startuml credit
+
+!includeurl ../include/C4_Component.puml
+
+title Context Diagram - Online Credit Application
+
+Person(customer, "Customer", "Bank client")
+Person(manager_office, "Office Manager", "Works with applications in ABS")
+Person(manager_credit, "Credit Department Manager", "Processes applications in Credit Conveyor")
+
+System_Ext(sms_gateway, "SMS Gateway", "External SMS service")
+System_Ext(bki, "Bureau of Credit Histories", "External REST API")
+
+System_Boundary(bank, "Standard Bank") {
+    System(credit_front, "Credit Front Microservice", "Handles online applications, pre-approvals, async integration")
+    System(credit_conveyor, "Credit Conveyor", "Camunda BPM, Oracle DB")
+    System(scoring, "Scoring System", "Python/Flask, PostgreSQL")
+    System(abs, "ABS", "Oracle, Delphi")
+}
+
+Rel(customer, credit_front, "View offers, apply", "HTTPS")
+Rel(credit_front, sms_gateway, "Send notifications", "REST")
+Rel(credit_front, scoring, "Request scoring (for new apps)", "REST")
+Rel(credit_front, bki, "Request credit history (via scoring or directly)", "REST")
+Rel(credit_front, credit_conveyor, "Send application (async via Kafka)", "Kafka")
+Rel(credit_conveyor, scoring, "Request scoring (during processing)", "REST")
+Rel(credit_conveyor, abs, "Synchronize status, get client data", "JDBC/REST")
+Rel(manager_office, abs, "Create/find applications", "Desktop")
+Rel(manager_credit, credit_conveyor, "Process applications", "Web UI")
+
+Rel(abs, credit_conveyor, "Publish application events (CDC)", "Kafka")
+
+@enduml
